@@ -1,0 +1,18 @@
+[package]
+name = "rust_kernel"
+version = "0.1.0"
+authors = ["ivfranco <ivfranco33@protonmail.com>"]
+edition = "2018"
+
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[dependencies]
+bootloader = "^0.9"
+
+[package.metadata.bootimage]
+# The command invoked with the created bootimage (the "{}" will be replaced with the path to the
+# bootable disk image)
+# Applies to `bootimage run` and `bootimage runner`
+#
+# qemu is installed in host system (Windows 10) then called from WSL
+run-command = ["qemu-system-x86_64.exe", "-drive", "format=raw,file={}"]

@@ -1,0 +1,6 @@
+{
+    "rust-analyzer.checkOnSave.allTargets": false,
+    // same to .cargo/config.toml, custom target must be specified as path here, otherwise
+    // rust-analyzer won't run cargo check on save
+    "rust-analyzer.checkOnSave.target": "x86_64-unknown-none.json",
+}
