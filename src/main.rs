@@ -1,5 +1,11 @@
+//! A barebone kernel in Rust targeting x86_64, following instructions on [Writing an OS in
+//! Rust](https://os.phil-opp.com/), a series of blog posts by Philipp Oppermann.
+
 #![no_std]
 #![no_main]
+#![deny(missing_docs)]
+
+mod vga_buffer;
 
 use core::panic::PanicInfo;
 
@@ -8,17 +14,11 @@ fn panic(_info: &PanicInfo) -> ! {
     loop {}
 }
 
+/// Entry point of the kernel expected by lld.
 #[no_mangle]
 pub extern "C" fn _start() -> ! {
-    const VGA_BUFFER: *mut u8 = 0xb8000 as *mut u8;
-    const HELLO: &[u8] = b"Hello World!";
-    const CYAN: u8 = 0xb;
-
-    for (i, &byte) in HELLO.iter().enumerate() {
-        unsafe {
-            *VGA_BUFFER.add(i * 2) = byte;
-            *VGA_BUFFER.add(i * 2 + 1) = CYAN;
-        }
+    for r in 0..30 {
+        println!("Hello World! {}", r);
     }
 
     loop {}
