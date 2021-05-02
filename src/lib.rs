@@ -1,8 +1,9 @@
 //! A barebone kernel in Rust targeting x86_64, following instructions on [Writing an OS in
 //! Rust](https://os.phil-opp.com/), a series of blog posts by Philipp Oppermann.
 
-#![cfg_attr(test, no_main)]
 #![feature(custom_test_frameworks)]
+#![feature(abi_x86_interrupt)]
+#![cfg_attr(test, no_main)]
 #![test_runner(crate::test_runner)]
 #![reexport_test_harness_main = "test_main"]
 #![no_std]
@@ -12,6 +13,9 @@
 pub mod serial;
 /// A safe global interface to the VGA text buffer in form of print macros.
 pub mod vga_buffer;
+
+/// Definition and initial function of CPU interruption handlers.
+pub mod interrupts;
 
 /// Exit code feed to the isa-debug-exit device of QEMU.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -47,9 +51,16 @@ pub fn exit_qemu(exit_code: QemuExitCode) -> ! {
 
 use core::panic::PanicInfo;
 
+/// Initialize the following components of the kernel:
+/// - interruption handlers
+pub fn init() {
+    interrupts::init_idt();
+}
+
 #[cfg(test)]
 #[no_mangle]
 pub extern "C" fn _start() -> ! {
+    init();
     test_main();
     // test_main calls into test_runner which always exits QEMU.
     unreachable!();

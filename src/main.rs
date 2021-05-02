@@ -10,6 +10,7 @@
 
 use core::panic::PanicInfo;
 
+use rust_kernel::init;
 #[cfg(not(test))]
 use rust_kernel::println;
 
@@ -29,6 +30,8 @@ fn panic(info: &PanicInfo) -> ! {
 /// Entry point of the kernel expected by lld.
 #[no_mangle]
 pub extern "C" fn _start() -> ! {
+    init();
+
     #[cfg(test)]
     {
         test_main();
@@ -38,10 +41,8 @@ pub extern "C" fn _start() -> ! {
 
     #[cfg(not(test))]
     {
-        for r in 0..30 {
-            println!("Hello World! {}", r);
-        }
-
-        panic!();
+        x86_64::instructions::interrupts::int3();
+        println!("It did not crash!");
+        loop {}
     }
 }
