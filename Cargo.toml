@@ -4,13 +4,18 @@ version = "0.1.0"
 authors = ["ivfranco <ivfranco33@protonmail.com>"]
 edition = "2018"
 
+[[test]]
+name = "should_panic"
+harness = false
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [dependencies]
 bootloader = "^0.9"
 lazy_static = { version = "1.4.0", features = ["spin_no_std"] }
 spin = "0.5.2"
+uart_16550 = "0.2.12"
 volatile = "0.2.6"
+x86_64 = "0.14.0"
 
 [package.metadata.bootimage]
 # The command invoked with the created bootimage (the "{}" will be replaced with the path to the
@@ -19,3 +24,12 @@ volatile = "0.2.6"
 #
 # qemu is installed in host system (Windows 10) then called from WSL
 run-command = ["qemu-system-x86_64.exe", "-drive", "format=raw,file={}"]
+test-args = [
+    # open isa-debug-exit device to terminate QEMU from inside the kernel
+    "-device", "isa-debug-exit,iobase=0xf4,iosize=0x04", 
+    # connect serial port output and stdout of QEMU to print test results
+    "-serial", "stdio",
+    # hide QEMU console, all output of tests are printed to the host
+    "-display", "none"
+]
+test-success-exit-code = 0x21 # (0x10 << 1) | 1

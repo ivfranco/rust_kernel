@@ -7,16 +7,16 @@ use volatile::Volatile;
 lazy_static! {
     /// A global interface to the VGA text buffer. Unlike in the blog posts text starts from the top
     /// left of the screen.
-    ///
-    /// Safety:
-    /// 0xb8000 is the address to the memory mapped VGA text buffer, memory layout is ensured by
-    /// repr(C) or repr(transparent) on corresponding types, the buffer is bounded by the [Buffer]
-    /// type.
     pub static ref WRITER: Mutex<Writer> = {
         let writer = Writer {
             row_position: 0,
             column_position: 0,
             color_code: ColorCode::new(Color::Yellow, Color::Black),
+            /// # Safety:
+            /// 0xb8000 is the address to the memory mapped VGA text buffer, memory layout is
+            /// ensured by repr(C) or repr(transparent) on corresponding types, the buffer is
+            /// bounded by the [Buffer] type, by lazy_static and Mutex the buffer is never
+            /// concurrently accessed.
             buffer: unsafe { &mut *(0xb8000 as *mut Buffer) },
         };
 
@@ -24,9 +24,11 @@ lazy_static! {
     };
 }
 
+/// A 4-bit VGA color.
 #[allow(dead_code)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u8)]
+#[allow(missing_docs)]
 pub enum Color {
     // dark variants
     Black = 0,
@@ -56,6 +58,7 @@ pub enum Color {
 /// 7:      if set, the code point blinks
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(transparent)]
+#[doc(hidden)]
 pub struct ColorCode(u8);
 
 impl ColorCode {
@@ -71,6 +74,7 @@ impl ColorCode {
     }
 
     /// Let the VGA code point blink.
+    #[allow(dead_code)]
     pub fn blink(self) -> Self {
         Self(self.0 | Self::BLINK_BIT)
     }
@@ -93,6 +97,7 @@ struct Buffer {
     chars: [[Volatile<ScreenChar>; BUFFER_WIDTH]; BUFFER_HEIGHT],
 }
 
+#[doc(hidden)]
 pub struct Writer {
     row_position: usize,
     column_position: usize,
@@ -189,4 +194,33 @@ macro_rules! println {
 pub fn _print(args: fmt::Arguments) {
     use core::fmt::Write;
     WRITER.lock().write_fmt(args).unwrap();
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test_case]
+    fn test_println_simple() {
+        println!("test_println_simple output");
+    }
+
+    #[test_case]
+    fn test_println_many() {
+        for _ in 0..200 {
+            println!("test_println_many output");
+        }
+    }
+
+    #[test_case]
+    fn test_println_output() {
+        let s = "Some test string that fits on a single line";
+        println!("{}", s);
+        let row = WRITER.lock().row_position - 1;
+
+        for (i, c) in s.chars().enumerate() {
+            let screen_char = WRITER.lock().buffer.chars[row][i].read();
+            assert_eq!(char::from(screen_char.cp437_code), c);
+        }
+    }
 }
