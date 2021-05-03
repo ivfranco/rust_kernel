@@ -43,6 +43,9 @@ pub extern "C" fn _start() -> ! {
     {
         x86_64::instructions::interrupts::int3();
         println!("It did not crash!");
+
+        // looping at the end of execution allows the output inside QEMU to be inspected
+        #[allow(clippy::empty_loop)]
         loop {}
     }
 }

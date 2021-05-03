@@ -11,11 +11,18 @@
 
 /// A safe global interface to print text to stdout of QEMU process in form of print macros.
 pub mod serial;
+
 /// A safe global interface to the VGA text buffer in form of print macros.
 pub mod vga_buffer;
 
-/// Definition and initial function of CPU interruption handlers.
+/// Definition and initialization of interruption handlers.
 pub mod interrupts;
+
+/// Definition and initialization of the Global Descriptor Table.
+pub mod gdt;
+
+/// Port number of isa-debug-exit as defined in package.metadata.bootimage.test-args in Cargo.toml.
+const ISA_DEBUG_EXIT_PORT: u16 = 0xf4;
 
 /// Exit code feed to the isa-debug-exit device of QEMU.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -35,11 +42,11 @@ pub fn exit_qemu(exit_code: QemuExitCode) -> ! {
     // using port number and data size specified in package.metadata.bootimage.test-args in
     // Cargo.toml.
     //
-    // Safety:
+    // # Safety
     // isa-debug-exit has no memory side effects, even if it had it's not likely to cause UB:
     // successful write to the port immediately terminates the QEMU process.
     unsafe {
-        let mut port = Port::<u32>::new(0xf4);
+        let mut port = Port::<u32>::new(ISA_DEBUG_EXIT_PORT);
         port.write(exit_code as u32);
     }
 
@@ -54,7 +61,12 @@ use core::panic::PanicInfo;
 /// Initialize the following components of the kernel:
 /// - interruption handlers
 pub fn init() {
-    interrupts::init_idt();
+    // # Safety
+    // GDT is initialized before this call.
+    unsafe {
+        interrupts::init_idt();
+    }
+    gdt::init();
 }
 
 #[cfg(test)]

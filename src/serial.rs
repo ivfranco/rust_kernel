@@ -5,7 +5,7 @@ use uart_16550::SerialPort;
 lazy_static! {
     /// The global interface to the first serial port in QEMU.
     ///
-    /// # Safety:
+    /// # Safety
     /// 0x3F8 maps to COM1 in QEMU, lazy_static ensures [SERIAL1] is constructed exactly once.
     pub static ref SERIAL1: Mutex<SerialPort> = {
         let mut serial_port = unsafe { SerialPort::new(0x3F8) };

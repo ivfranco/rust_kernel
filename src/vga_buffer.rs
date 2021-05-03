@@ -12,7 +12,7 @@ lazy_static! {
             row_position: 0,
             column_position: 0,
             color_code: ColorCode::new(Color::Yellow, Color::Black),
-            /// # Safety:
+            /// # Safety
             /// 0xb8000 is the address to the memory mapped VGA text buffer, memory layout is
             /// ensured by repr(C) or repr(transparent) on corresponding types, the buffer is
             /// bounded by the [Buffer] type, by lazy_static and Mutex the buffer is never
