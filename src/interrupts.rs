@@ -2,6 +2,7 @@ use crate::{print, println};
 
 use crate::gdt;
 use lazy_static::lazy_static;
+use pc_keyboard::{layouts, DecodedKey, HandleControl, Keyboard, ScancodeSet1};
 use pic8259_simple::ChainedPics;
 use spin::Mutex;
 use x86_64::structures::idt::{InterruptDescriptorTable, InterruptStackFrame};
@@ -40,8 +41,14 @@ lazy_static! {
             idt.double_fault.set_handler_fn(double_fault_handler).set_stack_index(gdt::DOUBLE_FAULT_IST_INDEX);
         }
         idt[InterruptIndex::Timer.to_usize()].set_handler_fn(timer_interrupt_handler);
+        idt[InterruptIndex::Keyboard.to_usize()].set_handler_fn(keyboard_interrupt_handler);
 
         idt
+    };
+
+    static ref KEYBOARD: Mutex<Keyboard<layouts::Us104Key, ScancodeSet1>> = {
+        let keyboard = Keyboard::new(layouts::Us104Key, ScancodeSet1, HandleControl::Ignore);
+        Mutex::new(keyboard)
     };
 }
 
@@ -124,8 +131,31 @@ extern "x86-interrupt" fn timer_interrupt_handler(_stack_frame: InterruptStackFr
     }
 }
 
-extern "x86-interrupt" fn keyboard_interrupt_handler(stack_frame: InterruptStackFrame) {
-    println!("INTERRUPT: KEYBOARD\n{:#?}", stack_frame);
+extern "x86-interrupt" fn keyboard_interrupt_handler(_stack_frame: InterruptStackFrame) {
+    use x86_64::instructions::port::Port;
+    const PS2_KEYBOARD_PORT: u16 = 0x60;
+
+    let mut keyboard = KEYBOARD.lock();
+    let mut port = Port::<u8>::new(PS2_KEYBOARD_PORT);
+
+    // # Safety
+    // 0x60 is the PS/2 controller data port, the port has data size of 1.
+    let scancode = unsafe { port.read() };
+
+    // Processing a byte read from the PS/2 controll port may not be always successful: the scancode
+    // may be invalid, the scancode may lead to an impossible state assuming the keyboard layout,
+    // the scancode may be corrupted by transmission, etc. Processing a byte may also not return a
+    // key event, e.g. the escape byte before extended keycode.
+    if let Ok(Some(key_event)) = keyboard.add_byte(scancode) {
+        // Press and release are two separate events in IBM XT. Here only key presses are mapped to
+        // characters.
+        if let Some(key) = keyboard.process_keyevent(key_event) {
+            match key {
+                DecodedKey::RawKey(key) => print!("{:?}", key),
+                DecodedKey::Unicode(code) => print!("{}", code),
+            }
+        }
+    }
 
     // # Safety
     // Keyboard is exactly the interrupt handled by this handler.
