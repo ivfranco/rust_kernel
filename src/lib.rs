@@ -52,8 +52,7 @@ pub fn exit_qemu(exit_code: QemuExitCode) -> ! {
 
     // Unreachable: QEMU should be terminated by write to isa-debug-exit. Loop in case QEMU is not
     // immediately shut down.
-    #[allow(clippy::empty_loop)]
-    loop {}
+    hlt_loop();
 }
 
 use core::panic::PanicInfo;
@@ -61,12 +60,21 @@ use core::panic::PanicInfo;
 /// Initialize the following components of the kernel:
 /// - interruption handlers
 pub fn init() {
+    gdt::init();
     // # Safety
     // GDT is initialized before this call.
     unsafe {
         interrupts::init_idt();
     }
-    gdt::init();
+    interrupts::init_pics();
+}
+
+/// Put the CPU in a hlt loop, allow the CPU to enter a sleep state until an interrupt arrives and
+/// after the interrupt handler returned.
+pub fn hlt_loop() -> ! {
+    loop {
+        x86_64::instructions::hlt();
+    }
 }
 
 #[cfg(test)]

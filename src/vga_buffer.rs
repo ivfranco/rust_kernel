@@ -193,7 +193,13 @@ macro_rules! println {
 #[doc(hidden)]
 pub fn _print(args: fmt::Arguments) {
     use core::fmt::Write;
-    WRITER.lock().write_fmt(args).unwrap();
+    use x86_64::instructions::interrupts;
+
+    // An interrupt when the WRITER is locked may trigger a handler that itself invokes `print!`,
+    // hence try to acquire the mutex again and deadlock.
+    interrupts::without_interrupts(|| {
+        WRITER.lock().write_fmt(args).unwrap();
+    });
 }
 
 #[cfg(test)]
@@ -214,13 +220,19 @@ mod tests {
 
     #[test_case]
     fn test_println_output() {
-        let s = "Some test string that fits on a single line";
-        println!("{}", s);
-        let row = WRITER.lock().row_position - 1;
+        use core::fmt::Write;
+        use x86_64::instructions::interrupts;
 
-        for (i, c) in s.chars().enumerate() {
-            let screen_char = WRITER.lock().buffer.chars[row][i].read();
-            assert_eq!(char::from(screen_char.cp437_code), c);
-        }
+        let s = "Some test string that fits on a single line";
+
+        interrupts::without_interrupts(|| {
+            let mut writer = WRITER.lock();
+            writeln!(writer, "\n{}", s).expect("writeln failed");
+            let row = writer.row_position - 1;
+            for (i, c) in s.chars().enumerate() {
+                let screen_char = writer.buffer.chars[row][i].read();
+                assert_eq!(char::from(screen_char.cp437_code), c);
+            }
+        })
     }
 }

@@ -12,13 +12,14 @@ use core::panic::PanicInfo;
 
 use rust_kernel::init;
 #[cfg(not(test))]
+#[cfg(not(test))]
 use rust_kernel::println;
 
 #[cfg(not(test))]
 #[panic_handler]
 fn panic(info: &PanicInfo) -> ! {
     println!("{}", info);
-    loop {}
+    rust_kernel::hlt_loop();
 }
 
 #[cfg(test)]
@@ -41,11 +42,7 @@ pub extern "C" fn _start() -> ! {
 
     #[cfg(not(test))]
     {
-        x86_64::instructions::interrupts::int3();
         println!("It did not crash!");
-
-        // looping at the end of execution allows the output inside QEMU to be inspected
-        #[allow(clippy::empty_loop)]
-        loop {}
+        rust_kernel::hlt_loop();
     }
 }
