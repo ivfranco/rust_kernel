@@ -21,6 +21,10 @@ pub mod interrupts;
 /// Definition and initialization of the Global Descriptor Table.
 pub mod gdt;
 
+/// Functions to manage the page tables, inspect and modify its content, also translate virtual
+/// addresses to physical addresses.
+pub mod memory;
+
 /// Port number of isa-debug-exit as defined in package.metadata.bootimage.test-args in Cargo.toml.
 const ISA_DEBUG_EXIT_PORT: u16 = 0xf4;
 
@@ -57,6 +61,9 @@ pub fn exit_qemu(exit_code: QemuExitCode) -> ! {
 
 use core::panic::PanicInfo;
 
+#[cfg(test)]
+use bootloader::{entry_point, BootInfo};
+
 /// Initialize the following components of the kernel:
 /// - interruption handlers
 pub fn init() {
@@ -78,8 +85,10 @@ pub fn hlt_loop() -> ! {
 }
 
 #[cfg(test)]
-#[no_mangle]
-pub extern "C" fn _start() -> ! {
+entry_point!(test_kernel_main);
+
+#[cfg(test)]
+fn test_kernel_main(_boot_info: &'static BootInfo) -> ! {
     init();
     test_main();
     // test_main calls into test_runner which always exits QEMU.

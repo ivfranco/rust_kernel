@@ -4,6 +4,10 @@ use lazy_static::lazy_static;
 use spin::Mutex;
 use volatile::Volatile;
 
+/// The physical memory address of memory-mapped VGA buffer, which is identity-mapped to the same
+/// virtual memory address by the bootloader.
+pub const VGA_PHYSICAL_ADDR: u64 = 0xb8000;
+
 lazy_static! {
     /// A global interface to the VGA text buffer. Unlike in the blog posts text starts from the top
     /// left of the screen.
@@ -17,7 +21,7 @@ lazy_static! {
             /// ensured by repr(C) or repr(transparent) on corresponding types, the buffer is
             /// bounded by the [Buffer] type, by lazy_static and Mutex the buffer is never
             /// concurrently accessed.
-            buffer: unsafe { &mut *(0xb8000 as *mut Buffer) },
+            buffer: unsafe { &mut *(VGA_PHYSICAL_ADDR as *mut Buffer) },
         };
 
         Mutex::new(writer)

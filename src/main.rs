@@ -6,12 +6,11 @@
 #![reexport_test_harness_main = "test_main"]
 #![no_std]
 #![no_main]
-#![deny(missing_docs)]
 
 use core::panic::PanicInfo;
 
+use bootloader::{entry_point, BootInfo};
 use rust_kernel::init;
-#[cfg(not(test))]
 #[cfg(not(test))]
 use rust_kernel::println;
 
@@ -28,9 +27,12 @@ fn panic(info: &PanicInfo) -> ! {
     rust_kernel::test_panic_handler(info);
 }
 
-/// Entry point of the kernel expected by lld.
-#[no_mangle]
-pub extern "C" fn _start() -> ! {
+// The type signuature of the kernel entry point cannot be type checked in Rust, the compiler
+// doesn't know _start is the entry point nor what form it should take. the macro entry_point!
+// enforces a correct type to the kernel entry point function.
+entry_point!(kernel_main);
+
+fn kernel_main(_boot_info: &'static BootInfo) -> ! {
     init();
 
     #[cfg(test)]
@@ -42,7 +44,7 @@ pub extern "C" fn _start() -> ! {
 
     #[cfg(not(test))]
     {
-        println!("It did not crash!");
+        println!("It didn't crash!");
         rust_kernel::hlt_loop();
     }
 }
