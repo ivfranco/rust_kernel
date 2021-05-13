@@ -2,12 +2,15 @@
 //! Rust](https://os.phil-opp.com/), a series of blog posts by Philipp Oppermann.
 
 #![feature(custom_test_frameworks)]
+#![feature(alloc_error_handler)]
 #![feature(abi_x86_interrupt)]
 #![cfg_attr(test, no_main)]
 #![test_runner(crate::test_runner)]
 #![reexport_test_harness_main = "test_main"]
 #![no_std]
 #![deny(missing_docs)]
+
+extern crate alloc;
 
 /// A safe global interface to print text to stdout of QEMU process in form of print macros.
 pub mod serial;
@@ -25,8 +28,16 @@ pub mod gdt;
 /// addresses to physical addresses.
 pub mod memory;
 
+/// A global allocator for the kernel.
+pub mod allocator;
+
 /// Port number of isa-debug-exit as defined in package.metadata.bootimage.test-args in Cargo.toml.
 const ISA_DEBUG_EXIT_PORT: u16 = 0xf4;
+
+#[alloc_error_handler]
+fn alloc_error_handler(layout: core::alloc::Layout) -> ! {
+    panic!("allocation error: {:?}", layout)
+}
 
 /// Exit code feed to the isa-debug-exit device of QEMU.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

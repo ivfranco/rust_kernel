@@ -1,0 +1,4 @@
+[toolchain]
+# The latest rust version 1.54 removed const_fn feature gate, breaks one third of the dependencies
+# mentioned in the blog post. 
+channel = "nightly-2021-04-20"
