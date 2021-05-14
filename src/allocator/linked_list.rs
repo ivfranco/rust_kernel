@@ -133,13 +133,13 @@ fn size_align(layout: Layout) -> Result<Layout, LayoutError> {
 
 unsafe impl GlobalAlloc for Locked<LinkedListAllocator> {
     unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
-        let aligned = match size_align(layout) {
+        let layout = match size_align(layout) {
             Ok(layout) => layout,
             Err(_) => return null_mut(),
         };
         let mut allocator = self.lock();
 
-        match allocator.find_region(aligned) {
+        match allocator.find_region(layout) {
             Some((region, alloc_start)) => {
                 let alloc_end = alloc_start
                     .checked_add(layout.size())
