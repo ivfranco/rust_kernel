@@ -16,10 +16,6 @@ harness = false
 [dependencies]
 bootloader = { version = "^0.9", features = ["map_physical_memory"] }
 lazy_static = { version = "1.4.0", features = ["spin_no_std"] }
-# A dependence of linked_list_allocator latest version 0.9 removed the feature gate const_fn in
-# favor of Rust 1.54 nightly (a crate with that feature doesn't compile in 1.54 anymore), as a
-# reuslt it no longer compiles on any nightly version below 1.54.
-linked_list_allocator = "^0.8"
 pc-keyboard = "0.5.1"
 pic8259_simple = "0.2.0"
 spin = "0.5.2"

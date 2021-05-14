@@ -16,6 +16,8 @@ use rust_kernel::{
 };
 use x86_64::VirtAddr;
 
+use rust_kernel::allocator::HEAP_SIZE;
+
 #[panic_handler]
 fn panic(info: &PanicInfo) -> ! {
     rust_kernel::test_panic_handler(info)
@@ -56,10 +58,18 @@ fn large_vec() {
 
 #[test_case]
 fn many_boxes() {
-    use rust_kernel::allocator::HEAP_SIZE;
-
     for i in 0..HEAP_SIZE {
         let x = Box::new(i);
         assert_eq!(*x, i);
     }
+}
+
+#[test_case]
+fn many_boxes_long_lived() {
+    let long_lived = Box::new(1); // new
+    for i in 0..HEAP_SIZE {
+        let x = Box::new(i);
+        assert_eq!(*x, i);
+    }
+    assert_eq!(*long_lived, 1); // new
 }

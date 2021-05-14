@@ -1,12 +1,21 @@
+/// A bump allocator, never free allocated memory.
+pub mod bump;
+
+/// A linked list allocator.
+pub mod linked_list;
+
 use alloc::alloc::GlobalAlloc;
 use core::{alloc::Layout, ptr::null_mut};
-use linked_list_allocator::LockedHeap;
 use x86_64::{
     structures::paging::{
         mapper::MapToError, FrameAllocator, Mapper, Page, PageTableFlags, Size4KiB,
     },
     VirtAddr,
 };
+
+use crate::locked::Locked;
+
+use self::linked_list::LinkedListAllocator;
 
 /// Start of the kernel heap region in the virtual address space.
 pub const HEAP_START: usize = 0x4444_4444_0000;
@@ -15,17 +24,17 @@ pub const HEAP_START: usize = 0x4444_4444_0000;
 pub const HEAP_SIZE: usize = 100 * 1024;
 
 #[global_allocator]
-static ALLOCATOR: LockedHeap = LockedHeap::empty();
+static ALLOCATOR: Locked<LinkedListAllocator> = Locked::new(LinkedListAllocator::new());
 
 /// A dummy allocator, returns error to all allocation request.
 pub struct Dummy;
 
 unsafe impl GlobalAlloc for Dummy {
-    unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
+    unsafe fn alloc(&self, _layout: Layout) -> *mut u8 {
         null_mut()
     }
 
-    unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout) {
+    unsafe fn dealloc(&self, _ptr: *mut u8, _layout: Layout) {
         unreachable!("dealloc should never be called")
     }
 }
@@ -68,4 +77,33 @@ pub fn init_heap(
     }
 
     Ok(())
+}
+
+/// Align the address `addr` up to the alignment `align`. The returned aligned address is always
+/// greater or equal to `addr`. Return `None` if the supplied alignment is not a power of 2, or the
+/// resulting pointer overflowed.
+pub fn align_up(addr: usize, align: usize) -> Option<usize> {
+    if !align.is_power_of_two() {
+        return None;
+    }
+
+    let mask = align - 1;
+    if addr & mask == 0 {
+        Some(addr)
+    } else {
+        (addr & !mask).checked_add(align)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test_case]
+    fn align_ptr() {
+        assert_eq!(align_up(0x1000, 0x1000), Some(0x1000));
+        assert_eq!(align_up(0x1010, 0x100), Some(0x1100));
+        assert_eq!(align_up(0x1010, 0x11), None);
+        assert_eq!(align_up(usize::MAX, 0x10), None);
+    }
 }

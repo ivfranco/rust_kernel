@@ -4,6 +4,7 @@
 #![feature(custom_test_frameworks)]
 #![feature(alloc_error_handler)]
 #![feature(abi_x86_interrupt)]
+#![feature(const_mut_refs)]
 #![cfg_attr(test, no_main)]
 #![test_runner(crate::test_runner)]
 #![reexport_test_harness_main = "test_main"]
@@ -27,6 +28,8 @@ pub mod gdt;
 /// Functions to manage the page tables, inspect and modify its content, also translate virtual
 /// addresses to physical addresses.
 pub mod memory;
+
+pub(crate) mod locked;
 
 /// A global allocator for the kernel.
 pub mod allocator;
