@@ -4,6 +4,9 @@ pub mod bump;
 /// A linked list allocator.
 pub mod linked_list;
 
+/// A fixed-size block allocator.
+pub mod fixed_size_block;
+
 use alloc::alloc::GlobalAlloc;
 use core::{alloc::Layout, ptr::null_mut};
 use x86_64::{
@@ -15,7 +18,7 @@ use x86_64::{
 
 use crate::locked::Locked;
 
-use self::linked_list::LinkedListAllocator;
+use self::fixed_size_block::FixedSizeBlockAllocator;
 
 /// Start of the kernel heap region in the virtual address space.
 pub const HEAP_START: usize = 0x4444_4444_0000;
@@ -24,7 +27,7 @@ pub const HEAP_START: usize = 0x4444_4444_0000;
 pub const HEAP_SIZE: usize = 100 * 1024;
 
 #[global_allocator]
-static ALLOCATOR: Locked<LinkedListAllocator> = Locked::new(LinkedListAllocator::new());
+static ALLOCATOR: Locked<FixedSizeBlockAllocator> = Locked::new(FixedSizeBlockAllocator::new());
 
 /// A dummy allocator, returns error to all allocation request.
 pub struct Dummy;

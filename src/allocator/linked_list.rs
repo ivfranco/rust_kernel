@@ -4,7 +4,7 @@ use core::{
     ptr::null_mut,
 };
 
-use crate::{allocator::align_up, locked::Locked, serial_println};
+use crate::{allocator::align_up, locked::Locked};
 
 struct ListNode {
     size: usize,
