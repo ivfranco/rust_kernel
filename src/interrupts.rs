@@ -153,27 +153,28 @@ extern "x86-interrupt" fn keyboard_interrupt_handler(_stack_frame: InterruptStac
     use x86_64::instructions::port::Port;
     const PS2_KEYBOARD_PORT: u16 = 0x60;
 
-    let mut keyboard = KEYBOARD.lock();
+    // let mut keyboard = KEYBOARD.lock();
     let mut port = Port::<u8>::new(PS2_KEYBOARD_PORT);
 
     // # Safety
     // 0x60 is the PS/2 controller data port, the port has data size of 1.
     let scancode = unsafe { port.read() };
+    crate::task::keyboard::add_scancode(scancode);
 
-    // Processing a byte read from the PS/2 data port may not always be successful: the scancode may
-    // be invalid, the scancode may lead to an impossible state assuming the keyboard layout, the
-    // scancode may be corrupted by transmission, etc. Processing a byte may also not return a key
-    // event, e.g. the escape byte before extended keycode.
-    if let Ok(Some(key_event)) = keyboard.add_byte(scancode) {
-        // Press and release are two separate events in IBM XT. Here only key presses are mapped to
-        // characters.
-        if let Some(key) = keyboard.process_keyevent(key_event) {
-            match key {
-                DecodedKey::RawKey(key) => print!("{:?}", key),
-                DecodedKey::Unicode(code) => print!("{}", code),
-            }
-        }
-    }
+    // // Processing a byte read from the PS/2 data port may not always be successful: the scancode may
+    // // be invalid, the scancode may lead to an impossible state assuming the keyboard layout, the
+    // // scancode may be corrupted by transmission, etc. Processing a byte may also not return a key
+    // // event, e.g. the escape byte before extended keycode.
+    // if let Ok(Some(key_event)) = keyboard.add_byte(scancode) {
+    //     // Press and release are two separate events in IBM XT. Here only key presses are mapped to
+    //     // characters.
+    //     if let Some(key) = keyboard.process_keyevent(key_event) {
+    //         match key {
+    //             DecodedKey::RawKey(key) => print!("{:?}", key),
+    //             DecodedKey::Unicode(code) => print!("{}", code),
+    //         }
+    //     }
+    // }
 
     // # Safety
     // Keyboard is exactly the interrupt handled by this handler.

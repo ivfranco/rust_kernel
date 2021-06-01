@@ -24,7 +24,7 @@ use self::fixed_size_block::FixedSizeBlockAllocator;
 pub const HEAP_START: usize = 0x4444_4444_0000;
 
 /// Size of the kernel heap region in the virtual address space.
-pub const HEAP_SIZE: usize = 100 * 1024;
+pub const HEAP_SIZE: usize = 1024 * 1024;
 
 #[global_allocator]
 static ALLOCATOR: Locked<FixedSizeBlockAllocator> = Locked::new(FixedSizeBlockAllocator::new());

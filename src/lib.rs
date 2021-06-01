@@ -34,6 +34,18 @@ pub(crate) mod locked;
 /// A global allocator for the kernel.
 pub mod allocator;
 
+/// Bare minimum code to bootstrap asynchronous tasks as required by Rust standard library.
+pub mod task;
+
+#[cfg(test)]
+use bootloader::entry_point;
+use bootloader::BootInfo;
+use x86_64::VirtAddr;
+
+use core::panic::PanicInfo;
+
+use memory::BootInfoFrameAllocator;
+
 /// Port number of isa-debug-exit as defined in package.metadata.bootimage.test-args in Cargo.toml.
 const ISA_DEBUG_EXIT_PORT: u16 = 0xf4;
 
@@ -73,14 +85,9 @@ pub fn exit_qemu(exit_code: QemuExitCode) -> ! {
     hlt_loop();
 }
 
-use core::panic::PanicInfo;
-
-#[cfg(test)]
-use bootloader::{entry_point, BootInfo};
-
 /// Initialize the following components of the kernel:
 /// - interruption handlers
-pub fn init() {
+pub fn init(boot_info: &'static BootInfo) {
     gdt::init();
     // # Safety
     // GDT is initialized before this call.
@@ -88,6 +95,17 @@ pub fn init() {
         interrupts::init_idt();
     }
     interrupts::init_pics();
+
+    let phys_mem_offset = VirtAddr::new(boot_info.physical_memory_offset);
+    // # Safety
+    // The physical memory is correctly mapped to the region starting at virtual address
+    // phys_mem_offset per bootloader.
+    let mut mapper = unsafe { memory::init(phys_mem_offset) };
+    // # Safety
+    // The memory map is valid per bootloader.
+    let mut frame_allocator = unsafe { BootInfoFrameAllocator::init(&boot_info.memory_map) };
+
+    allocator::init_heap(&mut mapper, &mut frame_allocator).expect("heap initialization failed");
 }
 
 /// Put the CPU in a hlt loop, allow the CPU to enter a sleep state until an interrupt arrives and
@@ -102,8 +120,8 @@ pub fn hlt_loop() -> ! {
 entry_point!(test_kernel_main);
 
 #[cfg(test)]
-fn test_kernel_main(_boot_info: &'static BootInfo) -> ! {
-    init();
+fn test_kernel_main(boot_info: &'static BootInfo) -> ! {
+    init(boot_info);
     test_main();
     // test_main calls into test_runner which always exits QEMU.
     unreachable!();
