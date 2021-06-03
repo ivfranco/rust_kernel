@@ -13,6 +13,7 @@ use core::panic::PanicInfo;
 
 use bootloader::{entry_point, BootInfo};
 use rust_kernel::println;
+use rust_kernel::task::keyboard;
 use rust_kernel::task::Task;
 use rust_kernel::{hlt_loop, init, task};
 
@@ -45,18 +46,9 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
 
     println!("It didn't crash!");
 
-    let mut executor = task::simple_executor::SimpleExecutor::new();
-    executor.spawn(Task::new(example_task()));
+    let mut executor = task::executor::Executor::new();
+    executor.spawn(Task::new(keyboard::print_keypresses()));
     executor.run();
 
     hlt_loop();
-}
-
-async fn async_number() -> u32 {
-    42
-}
-
-async fn example_task() {
-    let number = async_number().await;
-    println!("async number: {}", number);
 }

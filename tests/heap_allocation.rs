@@ -10,11 +10,6 @@ use alloc::{boxed::Box, vec::Vec};
 use core::panic::PanicInfo;
 
 use bootloader::{entry_point, BootInfo};
-use rust_kernel::{
-    allocator,
-    memory::{self, BootInfoFrameAllocator},
-};
-use x86_64::VirtAddr;
 
 use rust_kernel::allocator::HEAP_SIZE;
 
@@ -26,13 +21,7 @@ fn panic(info: &PanicInfo) -> ! {
 entry_point!(main);
 
 fn main(boot_info: &'static BootInfo) -> ! {
-    rust_kernel::init();
-
-    let phys_mem_offset = VirtAddr::new(boot_info.physical_memory_offset);
-    let mut mapper = unsafe { memory::init(phys_mem_offset) };
-    let mut frame_allocator = unsafe { BootInfoFrameAllocator::init(&boot_info.memory_map) };
-    allocator::init_heap(&mut mapper, &mut frame_allocator).expect("heap initialization failed");
-
+    rust_kernel::init(boot_info);
     test_main();
     unreachable!("test_main should exit QEMU");
 }
